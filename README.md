@@ -1,7 +1,7 @@
 # Lemon Questionnaire Platform
 > 简易问卷平台。
 - 后端：Flask + mysql
-- 前端：Vue + element-ui + echarts
+- 前端：Vue@2.6.11 + element-ui@2.13.2 + echarts@4.1.0
 ## 功能
 
 - 用户注册、登录，用户注册时需要填写邮箱并验证，用户名、密码要求在6字节以上，email的格式验证，并保证用户名和email在系统中唯一。
@@ -24,11 +24,11 @@
 .
 ├── README.md
 ├── app.py
-├── config.py
+├── config.py                           # configure your MySQL connection here
 ├── database.py
-├── lemon.sql	# MySQL database initialization
-├── main.py		# entrance of app
-├── pages		# route and logic for different features
+├── lemon.sql                           # MySQL database initialization
+├── main.py                             # entrance of app
+├── pages                               # route and logic for different features
 │   ├── __init__.py
 │   ├── account.py
 │   ├── analyze.py
@@ -37,7 +37,7 @@
 │   ├── home.py
 │   └── manage.py
 ├── requirements.txt
-├── static		# third-party js / css library
+├── static                              # third-party js / css library
 │   ├── css
 │   │   ├── element-ui@2.13.2.css
 │   │   └── fonts
@@ -48,7 +48,7 @@
 │       ├── element-ui@2.13.2.js
 │       ├── vue@2.6.11.js
 │       └── vue@2.6.11.min.js
-└── templates	# used for rendering pags
+└── templates                           # used for rendering pags
     ├── analyze.html
     ├── design.html
     ├── fill.html
@@ -63,7 +63,7 @@
 - 按`requirements.txt`配置环境
 - 在`config.py`中配置好MySQL连接（用户名/密码/服务器/端口等等）
 - 执行`python main.py`可以运行
-- 部署在服务器请自行配置gunicorn等工具
+- 部署在服务器请自行配置`gunicorn`等工具
 
 ## 截图
 ### 首页

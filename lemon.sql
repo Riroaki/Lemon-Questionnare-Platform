@@ -1,9 +1,9 @@
 -- Delete original data if any
-drop database `wenjuan`;
+drop database `lemon`;
 
 -- Create database and tables
-create database if not exists `wenjuan`;
-use `wenjuan`;
+create database if not exists `lemon`;
+use `lemon`;
 
 create table if not exists `user`
 (

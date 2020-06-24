@@ -1,2 +1,2 @@
 SECRET_KEY = 'Riroaki'
-SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://<user>:<pwd>@<ip>:<port>/wenjuan?charset=utf8'
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://<user>:<password>@<ip>:<port>/lemon?charset=utf8'
