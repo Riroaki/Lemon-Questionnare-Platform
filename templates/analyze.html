@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <title>数据分析-柠檬问卷</title>
     <!--    Used for developing -->
-    <script type="text/javascript" src="{{ url_for('static', filename='js/vue@2.6.11.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <!--    Used for production -->
-    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue@2.6.11.min.js')}}"></script>-->
+    {#    <script src="https://cdn.jsdelivr.net/npm/vue"></script>#}
 
     <!--    Element ui-->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css') }}">
-    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js') }}"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 
     <!--    ECharts-->
-    <script type="text/javascript" src="{{ url_for('static', filename='js/echarts@4.1.0.js') }}"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@4.7.0/dist/echarts.min.js"></script>
 
     <script type="text/javascript">
         // Get data from flask backend
