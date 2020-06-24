@@ -1,7 +1,7 @@
 # Lemon Questionnaire Platform
 > 简易问卷平台。
 - 后端：Flask + mysql
-- 前端：Vue@2.6.11 + element-ui@2.13.2 + echarts@4.1.0
+- 前端：Vue@2.6.11 + element-ui@2.13.2 + echarts@4.7.0
 ## 功能
 
 - 用户注册、登录，用户注册时需要填写邮箱并验证，用户名、密码要求在6字节以上，email的格式验证，并保证用户名和email在系统中唯一。
@@ -37,17 +37,11 @@
 │   ├── home.py
 │   └── manage.py
 ├── requirements.txt
-├── static                              # third-party js / css library
-│   ├── css
-│   │   ├── element-ui@2.13.2.css
-│   │   └── fonts
-│   │       ├── element-icons.ttf
-│   │       └── element-icons.woff
-│   └── js
-│       ├── echarts@4.1.0.js
-│       ├── element-ui@2.13.2.js
-│       ├── vue@2.6.11.js
-│       └── vue@2.6.11.min.js
+├── static                              # third-party css library
+│   └── css
+│       └── fonts
+│           ├── element-icons.ttf
+│           └── element-icons.woff
 └── templates                           # used for rendering pags
     ├── analyze.html
     ├── design.html
@@ -68,15 +62,15 @@
 ## 截图
 ### 首页
 
-<img src="screenshots/home1.png" alt="home1" style="zoom:50%;" />
+![home1](screenshots/home1.png)
 
-<img src="screenshots/home2.png" alt="home2" style="zoom:50%;" />
+![home2](screenshots/home2.png)
 
 ### 登录
 
-<img src="screenshots/login1.png" alt="login1" style="zoom:50%;" />
+![login1](screenshots/login1.png)
 
-<img src="screenshots/login2.png" alt="login2" style="zoom:50%;" />
+![login2](screenshots/login2.png)
 
 ### 设计
 
