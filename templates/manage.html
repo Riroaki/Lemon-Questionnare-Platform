@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>我的问卷-柠檬问卷</title>
+    <!--    Used for developing -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <!--    Used for production -->
+    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.min.js')}}"></script>-->
+
+    <!--    Element ui-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js') }}"></script>
+
+    <script type="text/javascript">
+        // Get data from flask backend
+        let survey_list = JSON.parse('{{ survey }}'.replace(/&#34;/g, '"')),
+            username = '{{ username }}';
+
+        // Vue components
+        window.onload = function () {
+            // Define vue component
+            let vm = new Vue({
+                el: '#survey_list',
+                data: {
+                    // User information
+                    username: username,
+
+                    // Survey data
+                    survey_list: survey_list,
+
+                    // Action status
+                    action_status: null
+                },
+                methods: {
+                    publish_survey: function (survey_id) {
+                        // Publish survey
+                        let info_dict = {'action': 'publish', 'survey_id': survey_id};
+                        let request = new XMLHttpRequest();
+                        request.open('POST', location.href, true);
+                        request.setRequestHeader("Content-type", "application/json");
+                        request.send(JSON.stringify(info_dict));
+                        request.onreadystatechange = function () {
+                            if (request.readyState === 4 && request.status === 200) {
+                                let response = JSON.parse(request.responseText);
+                                console.log(response);
+                                // Update information
+                                if ('success' === response['status']) {
+                                    // Reload page
+                                    window.location.href = '/manage/';
+                                    window.vm.$message({
+                                        message: '问卷发布成功！',
+                                        type: 'success'
+                                    });
+                                }
+                            }
+                        };
+                    },
+
+                    delete_survey: function (survey_id) {
+                        this.$confirm('将会丢失问卷内容和所有收集到的信息（如果问卷已经发布），确定删除？', '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            // Delete survey
+                            let info_dict = {'action': 'delete', 'survey_id': survey_id};
+                            let request = new XMLHttpRequest();
+                            request.open('POST', location.href, true);
+                            request.setRequestHeader("Content-type", "application/json");
+                            request.send(JSON.stringify(info_dict));
+                            request.onreadystatechange = function () {
+                                if (request.readyState === 4 && request.status === 200) {
+                                    let response = JSON.parse(request.responseText);
+                                    console.log(response);
+                                    // Update information
+                                    if ('success' === response['status']) {
+                                        // Reload page
+                                        window.location.href = '/manage/';
+                                    }
+                                }
+                            };
+                        }).catch(() => {
+                            this.$message({
+                                type: 'info',
+                                message: '已取消删除'
+                            });
+                        });
+                    },
+
+                    redirect: function (path, survey_id) {
+                        location.href = '/' + path + '/' + survey_id;
+                    }
+                }
+            });
+
+            // For debug usage
+            window.vm = vm;
+        };
+    </script>
+
+</head>
+<body>
+{% raw %}
+<el-container id="survey_list" style="margin: 0 5%">
+    <el-header>
+        <h1><i class="el-icon-grape">
+            <el-divider direction="vertical"></el-divider>
+            问卷管理：{{ username }}的问卷</i>
+            <el-divider direction="vertical"></el-divider>
+            <el-link :underline="false" type="primary" style="font-size: 20px" href="/">
+                返回首页
+            </el-link>
+        </h1>
+    </el-header>
+    <el-main>
+        <el-link v-if="!survey_list.length" type="primary"
+                 href="/design/">你还没有问卷，点击这里开始设计你的第一份问卷吧！
+        </el-link>
+        <el-card class="box-card" shadow="hover" v-for="survey in survey_list"
+                 style="margin: 2% 0" :key="survey['index']">
+            <div slot="header" class="clearfix">
+                <el-link type="primary" :href="'/design/' + survey['index']"
+                         style="font-size: 20px">{{ survey['title'] }}
+                </el-link>
+            </div>
+
+            <el-timeline>
+                <el-timeline-item :timestamp="survey['update_time']" size="large" color="#67C23A">
+                    问卷描述：{{ survey['desc'] || '无' }}
+                </el-timeline-item>
+                <el-timeline-item :timestamp="survey['update_time']" size="large" color="#67C23A">
+                    上次保存
+                </el-timeline-item>
+                <el-timeline-item :timestamp="survey['status'] ? survey['publish_time']: '--'"
+                                  size="large" :color="survey['status'] ? '#67C23A' : '#909399'">
+                    发布状态：{{ survey['status'] ? '已发布' : '未发布' }}
+                </el-timeline-item>
+            </el-timeline>
+
+            <el-row>
+                <el-button type="primary" icon="el-icon-edit"
+                           @click="redirect('design', survey['index'])">编辑
+                </el-button>
+
+                <el-button v-if="survey['status']" type="primary" icon="el-icon-edit-outline"
+                           @click="redirect('fill', survey['index'])">填写
+                </el-button>
+                <el-button v-if="survey['status']" type="primary" icon="el-icon-s-data"
+                           @click="redirect('analyze', survey['index'])">分析
+                </el-button>
+                <el-button v-else type="primary" icon="el-icon-s-promotion"
+                           @click="publish_survey(survey['index']);">发布
+                </el-button>
+
+                <el-button type="danger" icon="el-icon-delete"
+                           @click="delete_survey(survey['index']);">删除
+                </el-button>
+            </el-row>
+        </el-card>
+    </el-main>
+</el-container>
+{% endraw %}
+
+</body>
+</html>

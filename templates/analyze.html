@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>数据分析-柠檬问卷</title>
+    <!--    Used for developing -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <!--    Used for production -->
+    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.min.js')}}"></script>-->
+
+    <!--    Element ui-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js') }}"></script>
+
+    <!--    ECharts-->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/echarts@4.1.0.js') }}"></script>
+
+    <script type="text/javascript">
+        // Get data from flask backend
+        let survey_obj = JSON.parse('{{ survey }}'.replace(/&#34;/g, '"')),
+            questions_obj = JSON.parse('{{ questions }}'.replace(/&#34;/g, '"')),
+            all_options_obj = JSON.parse('{{ options }}'.replace(/&#34;/g, '"')),
+            submits_obj = JSON.parse('{{ submits }}'.replace(/&#34;/g, '"')),
+            all_answers_obj = JSON.parse('{{ answers }}'.replace(/&#34;/g, '"')),
+            username = '{{ username }}',
+            current_time = '{{ time }}';
+
+        for (let i = 0; i < questions_obj.length; i++)
+            questions_obj[i]['options'] = all_options_obj[i];
+
+        let all_answers_list = [];
+        for (let i = 0; i < questions_obj.length; i++) {
+            // Get each question's answer list
+            let answer_list = all_answers_obj.map(a => a[i]['content'].replace(/`/g, ''));
+            if (1 === questions_obj[i]['type'] || 5 === questions_obj[i]['type'])
+                answer_list = answer_list.map(a => parseInt(a));
+            else if (2 === questions_obj[i]['type'])
+                answer_list = answer_list.map(a => JSON.parse(a));
+            else if (4 === questions_obj[i]['type'])
+                answer_list = answer_list.map(a => parseFloat(a));
+            all_answers_list.push(answer_list);
+        }
+        console.log(all_answers_list.toString())
+
+        window.onload = function () {
+            let vm = new Vue({
+                el: '#main',
+                data: {
+                    username: username,
+                    survey: survey_obj,
+                    questions: questions_obj,
+                    current_time: current_time,
+                    total_submit: submits_obj.length,
+                    total_user: new Set(submits_obj.map(s => s['username'] ? s['username'] : s['submit_ip'])).size,
+                    submits_obj: submits_obj,
+                    answers_obj: all_answers_list
+                },
+                methods: {}
+            });
+
+            // For debug usage
+            window.vm = vm;
+
+            // Draw echarts tables
+            for (let i = 0; i < questions_obj.length; i++) {
+                let question = questions_obj[i], index = question['question_index'];
+                let chart_option = null;
+                let answer_list = all_answers_list[i];
+                console.log(answer_list);
+                if (1 === question['type']) {
+                    // Rose pie for single choice
+                    // Collect value for each choice
+                    let collected_data = [];
+                    for (let option of question['options'])
+                        collected_data.push({value: 0, name: option['text']});
+                    for (let answer of answer_list)
+                        // Selected index is one step larger than true index
+                        collected_data[answer - 1].value += 1;
+                    chart_option = {
+                        series: [{
+                            name: '题目' + index.toString(), type: 'pie', radius: '60%',
+                            roseType: 'angle', data: collected_data
+                        }]
+                    };
+                } else if (2 === question['type']) {
+                    // Bar for multi choice
+                    // Collect value for each choice
+                    let x_names = question['options'].map(o => o['text']),
+                        y_values = Array(x_names.length).fill(0);
+                    for (let answer of answer_list)
+                        for (let choice of answer)
+                            y_values[choice - 1] += 1;
+                    chart_option = {
+                        title: {text: '题目' + index.toString()}, tooltip: {},
+                        legend: {data: ['投票数量']}, xAxis: {data: x_names},
+                        yAxis: {}, series: [{name: '投票数量', type: 'bar', data: y_values}]
+                    };
+                } else if (4 === question['type']) {
+                    // Funnel for numeric filling
+                    // Split number inputs
+                    let max_value = Math.max(...answer_list),
+                        min_value = Math.min(...answer_list),
+                        intervals = Array(5).fill(1),
+                        interval_value = [0, 1, 2, 3, 4, 5];
+                    for (let i = 0; i < 6; i++) {
+                        interval_value[i] = interval_value[i] * max_value + (5 - interval_value[i]) * min_value;
+                        interval_value[i] /= 5;
+                    }
+                    for (let answer of answer_list) {
+                        // Calculate level of answer
+                        let level_interval = (max_value - min_value) / 5;
+                        intervals[Math.floor((answer - min_value) / level_interval)] += 1;
+                    }
+                    chart_option = {
+                        backgroundColor: "#ffffff",
+                        color: ["#37A2DA", "#32C5E9", "#67E0E3", "#9FE6B8", "#FFDB5C",],
+                        tooltip: {trigger: 'item', formatter: "{a} <br/>{b} : {c}%"},
+                        calculable: true,
+                        series: [{
+                            name: '题目' + index.toString(), type: 'funnel', left: '10%',
+                            top: 60, bottom: 60, width: '80%', min: 0, max: 100, minSize: '5%',
+                            maxSize: '100%', sort: 'none', gap: 2,
+                            label: {
+                                normal: {show: true, position: 'inside'},
+                                emphasis: {textStyle: {fontSize: 20}}
+                            },
+                            labelLine: {
+                                normal: {
+                                    length: 10,
+                                    lineStyle: {width: 1, type: 'solid'}
+                                }
+                            },
+                            itemStyle: {
+                                normal: {borderColor: '#fff', borderWidth: 1}
+                            },
+                            data: [
+                                {
+                                    value: intervals[4],
+                                    name: interval_value[4].toString() + '-' + interval_value[5].toString()
+                                },
+                                {
+                                    value: intervals[3],
+                                    name: interval_value[3].toString() + '-' + interval_value[4].toString()
+                                },
+                                {
+                                    value: intervals[2],
+                                    name: interval_value[2].toString() + '-' + interval_value[3].toString()
+                                },
+                                {
+                                    value: intervals[1],
+                                    name: interval_value[1].toString() + '-' + interval_value[2].toString()
+                                },
+                                {
+                                    value: intervals[0],
+                                    name: interval_value[0].toString() + '-' + interval_value[1].toString()
+                                },
+                            ]
+                        }]
+                    };
+                } else if (5 === question['type']) {
+                    // Rose pie for rating
+                    // Collect value for each choice
+                    let collected_data = [];
+                    for (let i = 1; i <= question['levels']; i++)
+                        collected_data.push({value: 0, name: i.toString()});
+                    for (let answer of answer_list)
+                        // Selected index is one step larger than true index
+                        collected_data[answer - 1].value += 1;
+                    chart_option = {
+                        series: [{
+                            name: '题目' + index.toString(), type: 'pie', radius: '60%',
+                            roseType: 'angle', data: collected_data
+                        }]
+                    };
+                }
+
+                if (chart_option) {
+                    let chart = echarts.init(document.getElementById('analyze' + index.toString()));
+                    chart.setOption(chart_option);
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+
+{% raw %}
+<el-container id="main" style="margin: 0 5%">
+    <el-header>
+        <h1><i class="el-icon-grape">
+            <el-divider direction="vertical"></el-divider>
+            数据分析：《{{ survey['title'] }}》</i>
+            <el-divider direction="vertical"></el-divider>
+            <el-link :underline="false" type="primary" style="font-size: 20px" href="/">
+                返回首页
+            </el-link>
+        </h1>
+    </el-header>
+
+    <el-link v-if="!submits_obj.length" :underline="false" type="primary" :href="'/fill/' + survey['index']">
+        <h2>目前还没有人填过这份问卷，点击这里进行填写和分享！</h2>
+    </el-link>
+
+    <el-main v-if="submits_obj.length">
+        <p>发布于：{{ survey['publish_time'] }}，截止：{{ current_time }}</p>
+        <p>总提交{{ total_submit }}次，{{ total_user }}个用户参与（包含未登录用户）</p>
+        <el-divider content-position="left">以下为具体题目分析</el-divider>
+
+        <el-card class="box-card" style="margin: 2% 0" v-for="question in questions" :key="question['question_index']">
+            <div slot="header" class="clearfix">
+                <h3>{{ question['compulsory'] ? '*' : '' }}
+                    题目{{ question['question_index'] }}：{{ question['title'] }}</h3>
+            </div>
+            <div :id="'analyze' + question['question_index']"
+                 style="width: 100%;height:300px;">
+                <h2 v-if="question['type'] === 3">目前不支持文本题目的数据分析:(</h2>
+                <h2 v-else-if="!answers_obj[question['question_index'] - 1].length">当前问题没有数据哦:(</h2>
+            </div>
+        </el-card>
+    </el-main>
+</el-container>
+{% endraw %}
+
+</body>
+</html>

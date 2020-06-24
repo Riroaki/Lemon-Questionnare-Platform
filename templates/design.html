@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>设计问卷-柠檬问卷</title>
+    <!--    Used for developing -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <!--    Used for production -->
+    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.min.js')}}"></script>-->
+
+    <!--    Element ui-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js') }}"></script>
+
+    <script type="text/javascript">
+        // Get data from flask backend
+        let survey_obj = JSON.parse('{{ survey }}'.replace(/&#34;/g, '"')),
+            questions_obj = JSON.parse('{{ questions }}'.replace(/&#34;/g, '"')),
+            all_options_obj = JSON.parse('{{ options }}'.replace(/&#34;/g, '"')),
+            username = '{{ username }}';
+
+        // Used for empty question template
+        let make_empty_option = function (index) {
+            return {
+                'index': -1, 'question_id': -1, 'option_index': index,
+                'text': ''
+            };
+        };
+
+        let make_empty_question = function (question_type, index) {
+            question_type = parseInt(question_type);
+            // Single choice
+            if (1 === question_type)
+                return {
+                    'index': null, 'title': '', 'type': 1, 'survey_id': -1,
+                    'num_choices': 3, 'question_index': index, 'compulsory': true, 'error': '',
+                    'options': [make_empty_option(1), make_empty_option(2), make_empty_option(3)]
+                };
+            // Multi choice
+            if (2 === question_type)
+                return {
+                    'index': null, 'title': '', 'type': 2, 'survey_id': -1,
+                    'num_choices': 3, 'num_min_chosen': 1, 'num_max_chosen': 3,
+                    'question_index': index, 'compulsory': true, 'error': '',
+                    'options': [make_empty_option(1), make_empty_option(2), make_empty_option(3)]
+                };
+            // Blank filling
+            if (3 === question_type)
+                return {
+                    'index': null, 'title': '', 'type': 3, 'survey_id': -1, 'error': '',
+                    'single_row': true, 'question_index': index, 'compulsory': true
+                };
+            // Numeric filling
+            if (4 === question_type)
+                return {
+                    'index': null, 'title': '', 'type': 4, 'survey_id': -1, 'error': '',
+                    'fill_digit': true, 'question_index': index, 'compulsory': true
+                };
+            // Rating
+            if (5 === question_type)
+                return {
+                    'index': null, 'title': '', 'type': 5, 'survey_id': -1, 'error': '',
+                    'levels': 4, 'question_index': index, 'compulsory': true
+                };
+        };
+
+        // If nothing is given, generate an empty placeholder
+        if (null === survey_obj) {
+            // Generate an empty survey
+            survey_obj = {
+                'index': null, 'title': '', 'username': username,
+                'desc': '', 'status': false, 'answer_type': 0, 'error': '',
+                'publish_time': '', 'update_time': ''
+            };
+            // Generate an empty question
+            questions_obj = [];
+        } else {
+            // Load survey data from source
+            survey_obj['error'] = '';
+            for (let i = 0; i < questions_obj.length; i++) {
+                questions_obj[i]['options'] = all_options_obj[i];
+                questions_obj[i]['error'] = '';
+            }
+        }
+
+        // Vue components
+        window.onload = function () {
+            // Define vue component
+            let vm = new Vue({
+                el: '#survey',
+                data: {
+                    // User information
+                    username: username,
+
+                    // Status
+                    status: survey_obj['status'],
+                    update_time: survey_obj['update_time'],
+                    publish_time: survey_obj['publish_time'],
+
+                    // Survey information
+                    survey: survey_obj,
+
+                    // Question information
+                    questions: questions_obj,
+
+                    // Current question type
+                    current_type: "1",
+
+                    // Save data: for debug usage
+                    submit_data: {},
+
+                    // Answer type
+                    login_required: survey_obj['answer_type'] === 0,
+                    allow_multiple_in_total: Math.sign(survey_obj['answer_type']) === 1,
+                    answer_count: Math.abs(survey_obj['answer_type'])
+                },
+                methods: {
+                    add_question: function () {
+                        let index = this.questions.length + 1;
+                        console.log('add question ' + this.current_type + " at " + index.toString());
+                        this.questions.push(make_empty_question(this.current_type, index));
+                    },
+
+                    add_option: function (index) {
+                        console.log('add option at question ' + index.toString());
+                        let option_index = this.questions[index - 1]['options'].length + 1;
+                        this.questions[index - 1]['options'].push(make_empty_option(option_index));
+                        this.questions[index - 1]['num_choices'] += 1;
+                    },
+
+                    delete_option: function (question_index, option_index) {
+                        console.log('delete option ' + option_index.toString() + ' of question ' + question_index.toString());
+                        this.questions[question_index - 1]['options'].splice(option_index - 1, 1);
+                        // Fix indices
+                        for (let i = 0; i < this.questions[question_index - 1]['options'].length; i++)
+                            this.questions[question_index - 1]['options'][i]['option_index'] = i + 1;
+                    },
+
+                    clear_option: function (index) {
+                        console.log('clear options of question ' + index.toString());
+                        this.questions[index - 1]['options'] = [];
+                        this.questions[index - 1]['num_choices'] = 0;
+                    },
+
+                    delete_question: function (index) {
+                        console.log('delete question ' + index.toString());
+                        this.questions.splice(index - 1, 1);
+                        // Fix indices
+                        for (let i = 0; i < this.questions.length; i++)
+                            this.questions[i]['question_index'] = i + 1;
+                    },
+
+                    clear_question: function () {
+                        this.$confirm('确定要清空所有问题吗？', '清空问题', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            console.log('clear all questions')
+                            this.questions = [];
+                            this.$message({
+                                type: 'info',
+                                message: '问题清空完毕'
+                            });
+                        }).catch(() => {
+                            this.$message({
+                                type: 'info',
+                                message: '已取消清空问题'
+                            });
+                        });
+                    },
+
+                    submit_survey: function () {
+                        // Check survey validity
+                        let valid = true;
+                        if (!this.survey['title']) {
+                            valid = false;
+                            this.survey['error'] = '未填写问卷标题！';
+                        } else if (0 === this.questions.length) {
+                            valid = false;
+                            this.survey['error'] = '未添加问题！';
+                        } else
+                            // Clear error information
+                            this.survey['error'] = '';
+
+                        if (this.survey['error']) {
+                            this.$message({
+                                showClose: true,
+                                message: '保存失败，' + this.survey['error'],
+                                type: 'error'
+                            });
+                            return false;
+                        }
+
+                        // Check questions validity
+                        for (let i = 0; i < this.questions.length; i++) {
+                            let question = this.questions[i], now_valid = true;
+                            if (!question['title']) {
+                                now_valid = false;
+                                question['error'] = '未填写问题内容！';
+                            } else if (1 === question['type'] || 2 === question['type']) {
+                                // Single choices / multi choices
+                                if (0 === question['num_choices']) {
+                                    now_valid = false;
+                                    question['error'] = '未提供选项！'
+                                } else {
+                                    for (let option of question['options']) {
+                                        if (!option['text']) {
+                                            now_valid = false;
+                                            question['error'] = '选项不完整！'
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            // Clear error information
+                            if (now_valid)
+                                question['error'] = '';
+                            valid = valid && now_valid;
+                        }
+
+                        // If not valid, don't submit
+                        if (!valid) {
+                            this.$message({
+                                showClose: true,
+                                message: '保存失败，请检查填写内容！',
+                                type: 'error'
+                            });
+                            return false;
+                        }
+
+                        // Check again if the survey is already published
+                        this.$confirm('如果问卷已经发布，保存修改会丢失已经收集到的提交信息，确定要保存吗？', '保存问卷', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            this.$message({
+                                type: 'info',
+                                message: '正在保存……'
+                            });
+
+                            // Jsonify survey data
+                            let survey_dict = {
+                                'index': this.survey['index'],
+                                'title': this.survey['title'],
+                                'username': this.survey['username'],
+                                'desc': this.survey['desc'],
+                                'status': this.survey['status'],
+                                'answer_type': this.login_required ? 0 : this.answer_count * (this.allow_multiple_in_total ? 1 : -1),
+                                'update_time': this.update_time,
+                                'publish_time': this.publish_time
+                            };
+
+                            // Jsonify question data and option data
+                            let question_list = [], all_option_list = [];
+                            for (let question of this.questions) {
+                                let question_dict = {
+                                    'index': question['index'],
+                                    'title': question['title'],
+                                    'type': question['type'],
+                                    'survey_id': question['survey_id'],
+                                    'question_index': question['question_index'],
+                                    'num_choices': question['num_choices'] || -1,
+                                    'num_min_chosen': question['num_min_chosen'] || -1,
+                                    'num_max_chosen': question['num_max_chosen'] || -1,
+                                    'single_row': question['single_row'] || false,
+                                    'fill_digit': question['fill_digit'] || false,
+                                    'levels': question['levels'] || -1,
+                                    'compulsory': question['compulsory'],
+                                };
+                                question_list.push(question_dict);
+                                let option_list = [];
+                                if ('options' in question) {
+                                    for (let option of question['options']) {
+                                        // Save options
+                                        let option_dict = {
+                                            'index': option['index'],
+                                            'question_id': option['question_id'],
+                                            'option_index': option['option_index'],
+                                            'text': option['text']
+                                        };
+                                        option_list.push(option_dict);
+                                    }
+                                }
+                                all_option_list.push(option_list);
+                            }
+
+                            // Make a POST request
+                            survey_dict['questions'] = question_list;
+                            survey_dict['options'] = all_option_list;
+                            this.submit_data = survey_dict;
+                            let request = new XMLHttpRequest();
+                            request.open('POST', window.location.href, true);
+                            request.setRequestHeader("Content-type", "application/json");
+                            request.send(JSON.stringify(survey_dict));
+                            request.onreadystatechange = function () {
+                                if (request.readyState === 4 && request.status === 200) {
+                                    let response = JSON.parse(request.responseText);
+                                    // Reload the survey to get save time
+                                    window.location.href = '/design/' + response['survey_id'];
+                                    console.log(response);
+                                    if ('success' === response['status']) {
+                                        window.vm.$message({
+                                            type: 'info',
+                                            message: '问卷保存成功！'
+                                        });
+                                    } else {
+                                        window.vm.$message({
+                                            type: 'error',
+                                            message: '问卷保存失败！请仔细检查问卷内容……'
+                                        });
+                                    }
+                                }
+                            }
+                            return true;
+                        }).catch(() => {
+                            this.$message({
+                                type: 'info',
+                                message: '已取消删除'
+                            });
+                        });
+                    }
+                }
+            });
+
+            // For debug usage
+            window.vm = vm;
+        };
+    </script>
+</head>
+<body>
+
+{% raw %}
+<el-container id="survey" style="margin: 0 5%">
+    <el-header>
+        <h1><i class="el-icon-edit">
+            <el-divider direction="vertical"></el-divider>
+            正在编辑：{{ username }}的问卷</i>
+            <el-divider direction="vertical"></el-divider>
+            <el-link :underline="false" type="primary" style="font-size: 20px" href="/">
+                返回首页
+            </el-link>
+        </h1>
+    </el-header>
+    <el-main>
+        <el-card class="box-card" style="margin: 2% 0">
+            <label>标题：</label>
+            <input type="text" v-model="survey['title']" placeholder="上限50字" maxlength="50">
+            <br><br>
+
+            <label>描述：</label>
+            <textarea style="vertical-align: top;" v-model="survey['desc']" placeholder="上限200字"
+                      maxlength="200"></textarea>
+            <br><br>
+
+            <label>状态：{{ status ? '发布于' + publish_time : '未发布' }}</label>
+            <br><br>
+
+            <label>上次保存：{{ update_time || '未保存' }}</label>
+            <br><br>
+
+            <input type="checkbox" id="login_required" v-model="login_required">
+            <label for="login_required">需要登录才能填写</label>
+            <br><br>
+
+            <div v-if="!login_required">
+                <label>填写选项： </label>
+                <select v-model="allow_multiple_in_total">
+                    <option value=true>总共允许单人多次填写</option>
+                    <option value=false>每日允许单人多次填写</option>
+                </select>
+                <label>单人最大填写次数：
+                    <input type="number" min="1" step="1" v-model="answer_count">
+                </label>
+            </div>
+        </el-card>
+
+        <el-divider content-position="left">以下为题目</el-divider>
+        <h2 v-if="!questions.length">目前没有题目</h2>
+
+        <!--    Order by question_index in this survey-->
+        <el-card class="box-card" v-for="question in questions" :key="question['question_index']">
+            <div slot="header" class="clearfix">
+                <label>题目{{ question['question_index'] }}：
+                    <input type="text" v-model="question['title']" placeholder="上限100字" maxlength="100">
+                </label>
+                <el-button style="float: right; padding: 3px 0" type="text"
+                           @click="delete_question(question['question_index']);">删除问题
+                </el-button>
+                <label>是否必做：
+                    <input type="checkbox" v-model="question['compulsory']">
+                </label>
+            </div>
+
+            <!--                Set view according to question type-->
+            <!--        Single choice-->
+            <div v-if="question['type'] === 1">
+                <button v-on:click="add_option(question['question_index']);">添加选项</button>
+                <button v-on:click="clear_option(question['question_index']);">清空选项</button>
+                <ul v-for="option in question['options']" :key="option['option_index']">
+                    <label>选项{{ option['option_index'] }}：
+                        <input type="text" v-model="option['text']" placeholder="上限100字" maxlength="100">
+                    </label>
+                    <button v-on:click="delete_option(question['question_index'], option['option_index']);">删除选项
+                    </button>
+                </ul>
+            </div>
+
+            <!--        Multi choice-->
+            <div v-else-if="question['type'] === 2">
+                <label>最少选择：
+                    <input type="number" v-model="question['num_min_chosen']" step="1"
+                           :min="1"
+                           :max="question['num_max_chosen']">
+                </label>
+                <label>最多选择：
+                    <input type="number" v-model="question['num_max_chosen']" step="1"
+                           :min="question['num_min_chosen']"
+                           :max="question['num_choices']">
+                </label>
+                <br>
+                <button v-on:click="add_option(question['question_index']);">添加选项</button>
+                <button v-on:click="clear_option(question['question_index']);">清空选项</button>
+                <ul v-for="option in question['options']" :key="option['option_index']">
+                    <label>选项{{ option['option_index'] }}：
+                        <input type="text" v-model="option['text']" placeholder="上限100字" maxlength="100">
+                    </label>
+                    <button v-on:click="delete_option(question['question_index'], option['option_index']);">删除选项
+                    </button>
+                </ul>
+            </div>
+
+            <!--        Blank filling-->
+            <div v-else-if="question['type'] === 3">
+                <input type="radio" id="single_row" :value="true" v-model="question['single_row']">
+                <label for="single_row">单行输入</label>
+                <input type="radio" id="multi_row" :value="false" v-model="question['single_row']">
+                <label for="multi_row">多行输入</label>
+            </div>
+
+            <!--        Numeric filling-->
+            <div v-else-if="question['type'] === 4">
+                <input type="radio" id="int" :value="true" v-model="question['fill_digit']">
+                <label for="int">整数</label>
+                <input type="radio" id="float" :value="false" v-model="question['fill_digit']">
+                <label for="float">小数</label>
+            </div>
+
+            <!--        Rating-->
+            <div v-else>
+                <label>评价等级数量（评级最低从1开始，至少2个等级）
+                    <input type="number" min="2" max="100" step="1" v-model="question['levels']">
+                </label>
+            </div>
+
+            <!--        Error information if any-->
+            <div v-if="question['error']">
+                <p style="color: red"><strong>{{ question['error'] }}</strong></p>
+            </div>
+        </el-card>
+
+        <el-divider content-position="left">以上为题目</el-divider>
+
+        <label>题目类型：
+            <el-select v-model="current_type">
+                <el-option value=1>单选题</el-option>
+                <el-option value=2>多选题</el-option>
+                <el-option value=3>填空题</el-option>
+                <el-option value=4>数字题</el-option>
+                <el-option value=5>评分题</el-option>
+            </el-select>
+        </label>
+        <button v-on:click="add_question">添加问题</button>
+        <br><br>
+
+        <el-row>
+            <el-button type="success" icon="el-icon-check" v-on:click="submit_survey" round>保存问卷</el-button>
+            <el-button type="danger" icon="el-icon-delete" v-on:click="clear_question" round>清空问卷</el-button>
+        </el-row>
+    </el-main>
+</el-container>
+{% endraw %}
+
+</body>
+</html>

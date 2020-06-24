@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>登录/注册-柠檬问卷</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!--    Used for developing -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <!--    Used for production -->
+    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.min.js')}}"></script>-->
+
+    <!--    Element ui-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js') }}"></script>
+
+    <script type="text/javascript">
+        let error = JSON.parse('{{ error|tojson }}');
+        window.onload = function () {
+            let vm = new Vue({
+                el: '#login',
+                data: {
+                    is_register: 'yes',
+                    error: error,
+                }
+            });
+
+            // For debug usage
+            window.vm = vm;
+        };
+    </script>
+</head>
+<body>
+{% raw %}
+<el-container id="login" style="margin: 0 33%">
+    <el-header>
+        <el-alert v-if="error" :title="error" type="error"></el-alert>
+    </el-header>
+    <el-main>
+        <el-card class="box-card" style="align-self: center">
+            <div slot="header" class="clearfix">
+                <h1><i :class="is_register === 'yes' ? 'el-icon-goblet': 'el-icon-goblet-full'">
+                    <el-divider direction="vertical"></el-divider>
+                    {{ is_register === 'yes' ? '注册' : '登录' }}</i>
+                    <el-divider direction="vertical"></el-divider>
+                    <el-link :underline="false" type="primary" style="font-size: 20px" href="/">
+                        返回首页
+                    </el-link>
+                </h1>
+            </div>
+
+            <form method="post" action="">
+                <label for="username">姓名：</label><input type="text" id="username" name="name">
+                <br><br>
+                <label for="password">密码：</label><input type="password" id="password" name="pwd">
+                <br><br>
+                <div v-if="is_register === 'yes'">
+                    <label for="email">mail：</label><input type="text" id="email" name="email"><br>
+                </div>
+                <br>
+
+                <label>
+                    <input type="radio" name="is_register" value="yes" v-model="is_register" checked>
+                </label>注册<br>
+                <label>
+                    <input type="radio" name="is_register" value="no" v-model="is_register">
+                </label>登录<br>
+                <br>
+
+                <input type="submit" value="提交">
+            </form>
+        </el-card>
+    </el-main>
+</el-container>
+{% endraw %}
+</body>
+</html>

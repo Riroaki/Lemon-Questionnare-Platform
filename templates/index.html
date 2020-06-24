@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页-柠檬问卷</title>
+
+    <!--    Used for developing -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.js')}}"></script>
+    <!--    Used for production -->
+    <!--    <script type="text/javascript" src="{{ url_for('static', filename='js/vue.min.js')}}"></script>-->
+
+    <!--    Element ui-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/element-ui@2.13.2.css')}}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/element-ui@2.13.2.js')}}"></script>
+
+    <script type="text/javascript">
+        window.onload = function () {
+            let vm = new Vue({
+                el: '#main',
+                data: {
+                    username: JSON.parse('{{ username|tojson }}'),
+                    message: JSON.parse('{{ message|tojson }}'),
+                    message_type: '{{ message_type }}'
+                }
+            });
+
+            // For debug useage
+            window.vm = vm;
+        };
+    </script>
+</head>
+<body>
+{% raw %}
+<el-container id="main" style="margin: 0 5%">
+    <el-header>
+        <el-alert v-if="message" :title="message" :type="message_type"></el-alert>
+    </el-header>
+    <el-main>
+
+        <el-card class="box-card">
+            <div slot="header" class="clearfix">
+                <h1><i class="el-icon-watermelon">
+                    <el-divider direction="vertical"></el-divider>
+                    柠檬问卷</i></h1>
+                <div v-if="username">
+                    <h2>你好，
+                        <el-link type="primary" href="/manage/" style="font-size: 20px">{{ username }}</el-link>
+                    </h2>
+                </div>
+            </div>
+
+            <el-row>
+                <i v-if="username" class="el-icon-coffee" style="font-size: 25px; margin: 0 7%">
+                    <el-link style="font-size: 25px" type="primary" href="/logout/">
+                        用户登出
+                    </el-link>
+                </i>
+
+                <i v-else class="el-icon-cold-drink" style="font-size: 25px; margin: 0 4%">
+                    <el-link style="font-size: 25px" type="primary" href="/login/">
+                        用户注册/登录
+                    </el-link>
+                </i>
+
+                <el-divider direction="vertical"></el-divider>
+
+                <i class="el-icon-document-add" style="margin: 0 7%; font-size: 25px">
+                    <el-link type="primary" style="font-size: 25px" href="/design/">
+                        设计问卷
+                    </el-link>
+                </i>
+
+                <el-divider direction="vertical"></el-divider>
+
+                <i class="el-icon-folder-opened" style="font-size: 25px; margin: 0 7%">
+                    <el-link style="font-size: 25px" type="primary" href="/manage/">
+                        管理问卷
+                    </el-link>
+                </i>
+            </el-row>
+        </el-card>
+    </el-main>
+</el-container>
+{% endraw %}
+</body>
+</html>
